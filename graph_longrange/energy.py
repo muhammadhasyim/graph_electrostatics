@@ -140,7 +140,9 @@ class GTOElectrostaticEnergy(torch.nn.Module):
 
         k0_mask_bool = k0_mask > 0.0
         k_factor_coulomb = torch.zeros_like(k_norm2)
-        k_factor_coulomb[~k0_mask_bool] = 1.0 / k_norm2[~k0_mask_bool]
+        k_factor_coulomb[~k0_mask_bool] = (1.0 / k_norm2[~k0_mask_bool]).to(
+            dtype=k_factor_coulomb.dtype
+        )
         potential = apply_coulomb_kernel_batch(
             k_norm2=k_norm2,
             density=density,

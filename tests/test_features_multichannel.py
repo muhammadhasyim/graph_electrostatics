@@ -80,3 +80,41 @@ def test_multichannel_matches_looped_single_channel():
     looped_out = torch.stack(looped, dim=1)
 
     torch.testing.assert_close(multi_out, looped_out, rtol=1e-7, atol=1e-9)
+
+
+def test_pbc_precompute_geometry_accepts_bfloat16_k_norm2():
+    density_max_l = 0
+    feature_max_l = 0
+    kspace_cutoff = 4.0
+
+    features = GTOElectrostaticFeatures(
+        density_max_l=density_max_l,
+        density_smearing_width=1.0,
+        feature_max_l=feature_max_l,
+        feature_smearing_widths=[1.0],
+        include_self_interaction=True,
+        kspace_cutoff=kspace_cutoff,
+    )
+
+    node_positions = torch.randn(3, 3, dtype=torch.bfloat16)
+    batch = torch.zeros(3, dtype=torch.long)
+    cell = torch.eye(3, dtype=torch.float32).unsqueeze(0) * 8.0
+    rcell = torch.inverse(cell)
+    volume = torch.det(cell).to(torch.bfloat16)
+    pbc = torch.ones((1, 3), dtype=torch.bool)
+    k_vectors, k_norm2, k_vector_batch, k0_mask = compute_k_vectors_flat(
+        kspace_cutoff, cell, rcell
+    )
+
+    cache = features.precompute_geometry(
+        k_vectors=k_vectors.to(torch.bfloat16),
+        k_norm2=k_norm2.to(torch.bfloat16),
+        k_vector_batch=k_vector_batch,
+        k0_mask=k0_mask.to(torch.bfloat16),
+        node_positions=node_positions,
+        batch=batch,
+        volume=volume,
+        pbc=pbc,
+    )
+
+    assert cache["k_factor_coulomb"].dtype == torch.bfloat16

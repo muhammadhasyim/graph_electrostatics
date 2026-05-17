@@ -76,7 +76,8 @@ def apply_coulomb_kernel_batch(
     if k_factor_coulomb is None:
         k_factor_coulomb = torch.empty_like(k_norm2)
         k_factor_coulomb[k_norm2 == 0] = 0.0
-        k_factor_coulomb[k_norm2 != 0] = 1.0 / k_norm2[k_norm2 != 0]
+        knz = k_norm2 != 0
+        k_factor_coulomb[knz] = (1.0 / k_norm2[knz]).to(dtype=k_factor_coulomb.dtype)
     factor = k_factor_coulomb.reshape(-1, *([1] * (density.dim() - 1)))
     potential = density * factor
     potential.mul_(FIELD_CONSTANT)
@@ -588,7 +589,9 @@ class GTOElectrostaticFeatures(torch.nn.Module):
         volume_per_k = volume.reshape(-1)[k_vector_batch]
         k0_mask_bool = k0_mask > 0.0
         k_factor_coulomb = torch.zeros_like(k_norm2)
-        k_factor_coulomb[~k0_mask_bool] = 1.0 / k_norm2[~k0_mask_bool]
+        k_factor_coulomb[~k0_mask_bool] = (1.0 / k_norm2[~k0_mask_bool]).to(
+            dtype=k_factor_coulomb.dtype
+        )
         k_factor_proj = torch.ones_like(k_norm2)
         k_factor_proj[k0_mask_bool] = 0.5
 
@@ -897,7 +900,9 @@ class GTOElectrostaticFeaturesMultiChannel(torch.nn.Module):
         volume_per_k = volume.reshape(-1)[k_vector_batch]
         k0_mask_bool = k0_mask > 0.0
         k_factor_coulomb = torch.zeros_like(k_norm2)
-        k_factor_coulomb[~k0_mask_bool] = 1.0 / k_norm2[~k0_mask_bool]
+        k_factor_coulomb[~k0_mask_bool] = (1.0 / k_norm2[~k0_mask_bool]).to(
+            dtype=k_factor_coulomb.dtype
+        )
         k_factor_proj = torch.ones_like(k_norm2)
         k_factor_proj[k0_mask_bool] = 0.5
 
